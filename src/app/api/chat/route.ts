@@ -36,7 +36,8 @@ const RESPONSE_SCHEMA = {
 async function askGemini(message: string): Promise<Parsed> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY is not set");
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const isV3 = /gemini-(3|[4-9])/.test(model);
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -47,10 +48,12 @@ async function askGemini(message: string): Promise<Parsed> {
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: [{ role: "user", parts: [{ text: message }] }],
         generationConfig: {
-          temperature: 0,
           responseMimeType: "application/json", // บังคับตอบเป็น JSON
           responseSchema: RESPONSE_SCHEMA,
-          thinkingConfig: { thinkingBudget: 0 },
+          // Gemini 3.x ไม่รองรับ temperature/thinkingBudget (ใช้ thinkingLevel แทน)
+          ...(isV3
+            ? { thinkingConfig: { thinkingLevel: "low" } }
+            : { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }),
         },
       }),
     }
