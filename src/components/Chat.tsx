@@ -26,8 +26,8 @@ export default function Chat({ onSaved }: { onSaved: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message }),
       });
-      const data = (await res.json()) as { ok: boolean; reply: string };
-      setMsgs((m) => [...m, { id: crypto.randomUUID(), role: "bot", text: data.reply }]);
+      const data = (await res.json()) as { ok: boolean; reply: string; detail?: string };
+      setMsgs((m) => [...m, { id: crypto.randomUUID(), role: "bot", text: data.reply + (data.detail ? `\n\n⚙️ ${data.detail}` : "") }]);
       if (data.ok) onSaved();
     } catch {
       setMsgs((m) => [...m, { id: crypto.randomUUID(), role: "bot", text: "เชื่อมต่อไม่ได้ค่ะ ลองใหม่อีกครั้งนะคะ" }]);
