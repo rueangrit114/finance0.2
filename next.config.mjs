@@ -5,8 +5,8 @@
 // ถ้าตั้งใน Cloudflare ไม่ติด ให้ใส่ค่าตรงนี้แทนได้เลย (URL และ anon key เป็นค่า public
 // ปลอดภัยที่จะ commit เพราะข้อมูลถูกป้องกันด้วย RLS ใน Supabase)
 const FALLBACK = {
-  NEXT_PUBLIC_SUPABASE_URL: "https://hdyodnzdcxpeuzijkixp.supabase.co",       // เช่น "https://xxxx.supabase.co"
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_pu50YMjODYLUvPzukg9JlQ_8DEIlISi",  // anon public key (ห้ามใส่ service_role!)
+  NEXT_PUBLIC_SUPABASE_URL: "https://hdyodnzdcxpeuzijkixp.supabase.co",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_pu50YMjODYLUvPzukg9JlQ_8DEIlISi",
   NEXT_PUBLIC_FAMILY_USER_ID: "00000000-0000-0000-0000-000000000001",
 };
 
