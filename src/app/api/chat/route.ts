@@ -33,13 +33,11 @@ const RESPONSE_SCHEMA = {
   propertyOrdering: ["amount", "type", "category", "note"],
 };
 
-async function askGemini(message: string): Promise<Parsed> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY is not set");
-  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-  const isV3 = /gemini-(3|[4-9])/.test(model);
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  const res = await fetch(
+async function callGemini(model: string, key: string, message: string): Promise<Response> {
+  const isV3 = /gemini-(3|[4-9])/.test(model);
+  return fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: "POST",
@@ -58,7 +56,25 @@ async function askGemini(message: string): Promise<Parsed> {
       }),
     }
   );
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${(await res.text()).slice(0, 300)}`);
+}
+
+async function askGemini(message: string): Promise<Parsed> {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("GEMINI_API_KEY is not set");
+  const primary = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const fallback = process.env.GEMINI_FALLBACK_MODEL; // ไม่บังคับ
+  // ลองโมเดลหลัก 3 ครั้ง (รอ 0.7s, 1.5s) ถ้า Google ตอบ 429/5xx แล้วค่อยลองโมเดลสำรอง
+  const attempts = [primary, primary, primary, ...(fallback ? [fallback] : [])];
+
+  let res: Response | null = null;
+  for (let i = 0; i < attempts.length; i++) {
+    res = await callGemini(attempts[i], key, message);
+    if (res.ok || ![429, 500, 502, 503, 504].includes(res.status)) break;
+    if (i < attempts.length - 1) await sleep(i === 0 ? 700 : i === 1 ? 1500 : 0);
+  }
+  if (!res || !res.ok) {
+    throw new Error(`Gemini ${res?.status}: ${(await res?.text())?.slice(0, 300)}`);
+  }
 
   const data = (await res.json()) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
