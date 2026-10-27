@@ -75,6 +75,7 @@ const fmt = (n: number) => n.toLocaleString("th-TH", { maximumFractionDigits: 2 
 
 export async function POST(req: Request) {
   let message = "";
+  let stage = "init";
   try {
     const body = (await req.json()) as { message?: string };
     message = (body.message ?? "").toString().trim().slice(0, 500);
@@ -87,6 +88,7 @@ export async function POST(req: Request) {
 
   try {
     // 1) ส่งให้ Gemini แยกเป็น JSON
+    stage = "gemini";
     const tx = await askGemini(message);
     if (!(tx.amount > 0)) {
       return NextResponse.json({
@@ -96,6 +98,7 @@ export async function POST(req: Request) {
     }
 
     // 2) insert ลง Supabase
+    stage = "supabase";
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from("transactions")
@@ -121,9 +124,14 @@ export async function POST(req: Request) {
       transaction: data,
     });
   } catch (e) {
-    console.error("chat error", e);
+    console.error("chat error", stage, e);
+    // detail ช่วยหาสาเหตุ (ตัด key ออกก่อนส่ง)
+    const raw = e instanceof Error ? e.message : String(e);
+    const detail = `[${stage}] ${raw}`
+      .replace(/AIza[\w-]+|AQ\.[\w-]+|sb_[a-z]+_[\w-]+/g, "***")
+      .slice(0, 300);
     return NextResponse.json(
-      { ok: false, reply: "ขออภัยค่ะ ระบบขัดข้องชั่วคราว ลองใหม่อีกครั้งนะคะ" },
+      { ok: false, reply: "ขออภัยค่ะ ระบบขัดข้องชั่วคราว ลองใหม่อีกครั้งนะคะ", detail },
       { status: 500 }
     );
   }
